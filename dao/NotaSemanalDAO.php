@@ -1,6 +1,6 @@
 <?php
 
-include_once ('./dao/iNotaSemanalDAO.php');
+include_once ('iNotaSemanalDAO.php');
 
 class NotaSemanalDAO implements iNotaSemanalDAO {
 
@@ -8,16 +8,16 @@ class NotaSemanalDAO implements iNotaSemanalDAO {
             $json = Array();
             try{
                 $sql = "INSERT INTO c_notasemanal
-                               (c_nota_dataAvaliacao, 
-                                c_nota_valor, 
-                                c_ta_id, 
+                               (c_notasemanal_valor, 
+                                c_tipo_avaliacao, 
+                                c_md_id,
                                 c_pessoa_id)
                             VALUES
                                 (?,?,?,?)";
                 
-                $parametros = array($nota->getDataAvaliacao(),
-                                    $nota->getValor(),
+                $parametros = array($nota->getValor(),
                                     $nota->getTipoAvaliacao()->getId(),
+                                    $nota->getMatriculaDisplina()->getId(),
                                     $nota->getPessoaLog()->getId());
                 
                 $rs = ConnectionFactory::getConection()->prepare($sql);
@@ -33,8 +33,8 @@ class NotaSemanalDAO implements iNotaSemanalDAO {
                 $json = array("codigo" => 1, "message" => $e->getMessage());
             }
             
-            header("Content-Type: application/json");
-            echo json_encode($json);
+//            header("Content-Type: application/json");
+//            echo json_encode($json);
 	}
         
 	public function update(NotaSemanalModel $nota){
@@ -46,6 +46,7 @@ class NotaSemanalDAO implements iNotaSemanalDAO {
                             c_nota_dataAvaliacao = ?, 
                             c_nota_valor = ?, 
                             c_ta_id = ?, 
+                            c_md_id = ?,
                             c_pessoa_id = ?
                         WHERE 
                             c_nota_id = ?";
@@ -53,6 +54,7 @@ class NotaSemanalDAO implements iNotaSemanalDAO {
                 $parametros = array($nota->getDataAvaliacao(),
                                     $nota->getValor(),
                                     $nota->getTipoAvaliacao()->getId(),
+                                    $nota->getMatriculaDisplina()->getId(),
                                     $nota->getPessoaLog()->getId(),
                                     $nota->getId());
                 
@@ -82,11 +84,12 @@ class NotaSemanalDAO implements iNotaSemanalDAO {
                             n.c_notasemanal_datalancamento as data_lancamento, 
                             n.c_notasemanal_valor as valor, 
                             n.c_ta_id as tipo_avaliacao_id, 
+                            n.c_md_id as matricula_disciplina,
                             n.c_pessoa_id as pessoa_log_id
                         FROM 
-                            c_nota as n
+                            c_notasemanal as n
                         WHERE
-                            n.c_nota_id = ?";
+                            n.c_notasemanal_id = ?";
                 
                 $parametros = array($nota->getId());
                 $rs = ConnectionFactory::getConection()->prepare($sql);
@@ -110,15 +113,15 @@ class NotaSemanalDAO implements iNotaSemanalDAO {
             $json = Array();
             try{
                 $sql = "SELECT 
-                            n.c_nota_id as id, 
-                            n.c_md_id as matricula_disciplia_id, 
-                            n.c_nota_dataAvaliacao as data_avaliacao, 
-                            n.c_nota_dataLancamento as data_lancamento, 
-                            n.c_nota_valor as valor, 
+                            n.c_notasemanal_id as id, 
+                            n.c_notasemanal_dataavaliacao as data_avaliacao, 
+                            n.c_notasemanal_datalancamento as data_lancamento, 
+                            n.c_notasemanal_valor as valor, 
                             n.c_ta_id as tipo_avaliacao_id, 
+                            n.c_md_id as matricula_disciplina,
                             n.c_pessoa_id as pessoa_log_id
                         FROM 
-                            c_nota as n";
+                            c_notasemanal as n";
                 
                 $parametros = array();
                 $rs = ConnectionFactory::getConection()->prepare($sql);
@@ -140,26 +143,19 @@ class NotaSemanalDAO implements iNotaSemanalDAO {
             echo json_encode ($json);            
 	}
 
-	public function delete(NotaModel $nota){
+	public function delete(NotaSemanalModel $nota){
             $json = Array();
-            $nota_1 = $this->viewInterno($nota);
             try{
                 $sql = "DELETE FROM 
-                            c_nota
+                            c_notasemanal
                         WHERE
-                            c_nota_id = ?";
+                            c_notasemanal_id = ?";
                 
                 $parametros = array($nota->getId());
                 $rs = ConnectionFactory::getConection()->prepare($sql);
                 $rs->execute($parametros);
                 
                 if($rs->rowCount() > 0){
-                    
-                    $md = new MatriculaDisciplinaModel();
-                    $md->setId($nota_1->md);
-                    
-                    $daoMedia = new MediaDAO();
-                    $daoMedia->gerarMedias($md);
                     $json = array("codigo" => 0, "message" => "success");
                 }else{
                     $json = array("codigo" => 1, "message" => "error");
@@ -173,20 +169,18 @@ class NotaSemanalDAO implements iNotaSemanalDAO {
             echo json_encode ($json);             
 	}
         
-	public function notaPorMd(MatriculaDisciplinaModel $matriculaDisciplina){
+	public function notaPorTA(TipoAvaliacaoModel $ta, MatriculaDisciplinaModel $md){
             $json = Array();
             try{
                 $sql = "SELECT 
-                            n.c_nota_id as id, 
-                            n.c_md_id as matricula_disciplia_id, 
-                            n.c_nota_dataAvaliacao as data_avaliacao, 
-                            n.c_nota_dataLancamento as data_lancamento, 
-                            n.c_nota_valor as valor, 
+                            n.c_notasemanal_id as id, 
+                            n.c_notasemanal_dataavaliacao as data_avaliacao, 
+                            n.c_notasemanal_datalancamento as data_lancamento, 
+                            n.c_notasemanal_valor as valor, 
                             n.c_ta_id as tipo_avaliacao_id, 
-                            ta.c_ta_descricao as tipo_avaliacao_nome,
                             n.c_pessoa_id as pessoa_log_id
                         FROM 
-                            c_nota as n,
+                            c_notasemanal as n,
                             c_tipo_avaliacao ta
                         WHERE
                             n.c_ta_id = ta.c_ta_id AND
@@ -194,7 +188,7 @@ class NotaSemanalDAO implements iNotaSemanalDAO {
                         ORDER BY
                             c_nota_dataLancamento asc";
                 
-                $parametros = array($matriculaDisciplina->getId());
+                $parametros = array($ta->getId(), $md->getId());
                 $rs = ConnectionFactory::getConection()->prepare($sql);
                 $rs->execute($parametros);
                 

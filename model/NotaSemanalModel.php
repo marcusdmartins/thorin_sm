@@ -3,6 +3,7 @@
 class NotaSemanalModel {
 
     private $id;
+    private $matriculaDisplina;
     private $tipoAvaliacao;
     private $dataAvaliacao;
     private $dataLancamento;
@@ -64,5 +65,5 @@ class NotaSemanalModel {
     function setDataAvaliacao($dataAvaliacao) {
         $this->dataAvaliacao = $dataAvaliacao;
     }
-
+    
 }
