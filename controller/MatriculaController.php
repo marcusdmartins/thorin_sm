@@ -170,6 +170,15 @@ class MatriculaController {
                 
                 $dao = new MatriculaDAO();
                 $dao->matriculasPorAluno($pessoa);
+	}
+        
+	protected function dadosAcademicosGerais($data) {
+		$objData = json_decode($data);
+                $matricula = new MatriculaModel();
+                $matricula->setId($objData->id_matricula);
+                
+                $dao = new MatriculaDAO();
+                $dao->dadosAcademicosGerais($matricula);
 	} 
         
 	protected function matriculasRegularesPorTurma($data) {

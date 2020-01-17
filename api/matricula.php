@@ -46,6 +46,11 @@ class Matricula extends MatriculaController {
 	public function matriculasPorAluno($json) {
 		$controller = new MatriculaController();
 		$controller->matriculasPorAluno($json);
+	}
+        
+	public function dadosAcademicosGerais($json) {
+		$controller = new MatriculaController();
+		$controller->dadosAcademicosGerais($json);
 	} 
         
 	public function matriculasRegularesPorTurma($json) {

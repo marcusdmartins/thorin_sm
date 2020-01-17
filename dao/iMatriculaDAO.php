@@ -14,4 +14,7 @@ interface iMatriculaDAO
         public function matriculasRegularesPorTurma(TurmaModel $turma);
         public function matriculasRegularesPorTurmaInst(TurmaModel $turma, $busca);
         public function matriculasRegularesPorTurmaInterno(TurmaModel $turma);
+        public function dadosAcademicosGerais(MatriculaModel $matricula);
+        public function matriculasPorAlunoInterno(MatriculaModel $matricula);
+        public function buscaMDPorMatriculaInterno(MatriculaModel $matricula);
 }
