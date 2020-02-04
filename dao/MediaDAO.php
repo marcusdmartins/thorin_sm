@@ -149,6 +149,62 @@ class MediaDAO implements iMediaDAO {
             echo json_encode ($json);             
 	}
         
+	public function viewMediaMd(MediaMDModel $media){
+            $json = Array();
+            try{
+                $sql = "SELECT 
+                            m.m_media_md_id as id, 
+                            m.c_media_id as id_media,
+                            m.c_md_id as md,
+                            m.m_media_md_valor as valor
+                        FROM 
+                            m_media_md as m
+                        WHERE
+                            m.m_media_md_id = ?";
+                
+                $parametros = array($media->getId());
+                $rs = ConnectionFactory::getConection()->prepare($sql);
+                $rs->execute($parametros);
+                
+                if($rs->rowCount() > 0){
+                    $json = $rs->fetch(PDO::FETCH_OBJ);
+                }else{
+                    $json = array("codigo" => 1, "message" => "nenhum");
+                }
+                
+            } catch (Exception $e){
+                $json = array("codigo"=> 1, "message" => $e->getMessage());
+            }
+            
+            return $json;
+	}        
+        
+	public function updateMediaMD(MediaMDModel $media){
+            
+            try{
+                $sql = "UPDATE m_media_md
+                        SET
+                            m_media_md_valor = ?
+                        WHERE 
+                            m_media_md_id = ?";
+                
+                $parametros = array($media->getValor(),
+                                    $media->getId());
+                
+                $rs = ConnectionFactory::getConection()->prepare($sql);
+                $rs->execute($parametros);
+                
+                if($rs->rowCount() > 0){
+                    return "error";
+                }else{
+                    return "success";
+                }
+                
+            } catch (Exception $e){
+                return $e->getMessage();
+            }   
+	}           
+        
 	public function relacionaTipos(MediaModel $media, TipoAvaliacaoModel $tipoAvaliacao){
             $json = Array();
             try{
@@ -308,7 +364,6 @@ class MediaDAO implements iMediaDAO {
 	}
         
         public function gerarMedias(MatriculaDisciplinaModel $md){
-            $json = Array();
             
             $medias = $this->buscaTodasAsMedias();
             $excl = $this->excluiMediasPorMD($md);
@@ -318,11 +373,11 @@ class MediaDAO implements iMediaDAO {
                 $media->setId($m->id);
                 $qtdTipos = $this->buscaQtdTiposMedias($media);
                 $completa = $this->mediaCompleta($md, $media);
+                $recpMedia = $this->verificaRecpPorMedia($media);
                 
-                    if($completa == "true"){
-
+                    if($completa == "true" && $recpMedia == "false"){
+                        
                         if($qtdTipos > 0){
-
                             try{
                                 $sql = "SELECT 
                                             SUM(n.c_nota_valor)/".$qtdTipos." as media 
@@ -352,16 +407,27 @@ class MediaDAO implements iMediaDAO {
                             } catch (Exception $e){
                                 $lanca = $e->getMessage();
                             }
+                        }
+                    }else{
+                        $lanca = "nenhum";
                     }
-
-                }else{
-                    $lanca = "nenhum";
-                }
             }
             return $lanca;            
         }
         
-	public function buscaTodasAsMedias(){
+        public function recuperarMedia(MediaMDModel $media, $valor){
+            
+            $mediaRecuperada = new MediaMDModel();
+            $mediaAtual = $this->viewMediaMd($media);
+            $valorRecuperado = ($valor + $mediaAtual->valor)/2;
+            $mediaRecuperada->setId($mediaAtual->id);
+            $mediaRecuperada->setValor($valorRecuperado);
+            
+            $result = $this->updateMediaMD($mediaRecuperada);
+            return $result;
+        }
+
+        public function buscaTodasAsMedias(){
             $medias = Array();
             try{
                 $sql = "SELECT 
@@ -433,25 +499,37 @@ class MediaDAO implements iMediaDAO {
 	} 
         
 	public function excluiMediasPorMD(MatriculaDisciplinaModel $md){
+            
+            $medias = $this->buscaMediasPorMDInterno($md);
+            
+            if($medias != "nenhum"){
+                foreach ($medias as $media){
 
-            try{
-                $sql = "DELETE FROM 
-                            m_media_md 
-                        WHERE
-                            c_md_id = ?";
-                
-                $parametros = array($md->getId());
-                $rs = ConnectionFactory::getConection()->prepare($sql);
-                $rs->execute($parametros);
-                
-                if($rs->rowCount() > 0){
-                    return "success";
-                }else{
-                    return "error";
+                    $media_v = new MediaMDModel();
+                    $media_v->setId($media->id);
+
+                    //VERIFICA SE POSSUI RECUPERAÇÃO RELACIONADA
+                    $result_recp = $this->verificaRecp($media_v);
+
+                    //SE NÃO POSSUIR RECUPERAÇÃO A MÉDIA É EXCLUÍDA
+                    if($result_recp == 'false'){
+                        try{
+                            $sql = "DELETE FROM 
+                                        m_media_md 
+                                    WHERE
+                                        m_media_md_id = ?";
+
+                            $parametros = array($media->id);
+                            $rs = ConnectionFactory::getConection()->prepare($sql);
+                            $rs->execute($parametros);
+
+                        }catch (Exception $e){
+                            return $e->getMessage();
+                        }                     
+                    }
                 }
-            }catch (Exception $e){
-                return $e->getMessage();
-            }  
+            }
+ 
 	}
         
 	public function buscaMediasPorMD(MatriculaDisciplinaModel $md){
@@ -491,9 +569,44 @@ class MediaDAO implements iMediaDAO {
             echo json_encode ($json);            
 	}
         
+        public function buscaMediasPorMDInterno(MatriculaDisciplinaModel $md){
+            $json = Array();
+            try{
+                $sql = "SELECT
+                            mmd.m_media_md_id as id,
+                            mmd.m_media_md_valor as valor,
+                            m.c_media_id as id_media, 
+                            m.c_media_nome as nome,
+                            m.c_media_corte as corte,
+                            m.c_media_tipo as tipo
+                        FROM 
+                            m_media_md as mmd, 
+                            c_media as m
+                        WHERE
+                            mmd.c_media_id = m.c_media_id AND
+                            mmd.c_md_id = ?";
+                
+                $parametros = array($md->getId());
+                $rs = ConnectionFactory::getConection()->prepare($sql);
+                $rs->execute($parametros);
+                
+                if($rs->rowCount() > 0){
+                    while ($dados = $rs->fetch(PDO::FETCH_OBJ)){
+                        array_push($json, $dados);
+                    }
+                }else{
+                    return "nenhum";
+                }
+                
+            } catch (Exception $e){
+                $json = array("codigo"=> 1, "message" => $e->getMessage());
+            }
+            
+            return $json;            
+	}
+        
         public function mediaCompleta(MatriculaDisciplinaModel $md, MediaModel $media){
             $cont = 0;
-            $json = Array();
             $qtd_tipos = $this->buscaQtdTiposMedias($media);
             $tipos = $this->tipoAvaliacaoPorMediaInterno($media);
             foreach ($tipos as $tipo){
@@ -506,14 +619,57 @@ class MediaDAO implements iMediaDAO {
             }
             
             if($cont == $qtd_tipos){
-//                $json = array("codigo" => 1, "message" => "true", "qtd" => $qtd_tipos, "cont" => $cont);
                 return "true";
             }else{
-//                $json = array("codigo" => 1, "message" => "false", "qtd" => $qtd_tipos, "cont" => $cont);
                 return "false";
+            }          
+        }
+        
+        public function verificaRecp(MediaMDModel $media){
+            try{
+                $sql = "SELECT 
+                            r.*
+                        FROM 
+                            c_recp as r
+                        WHERE
+                            r.c_media_id = ?";
+                $parametros = array($media->getId());
+                $rs = ConnectionFactory::getConection()->prepare($sql);
+                $rs->execute($parametros);
+                
+                if($rs->rowCount() > 0){
+                    return "true";
+                }else{
+                    return "false";
+                }
+                
+            } catch (Exception $e){
+                return $e->getMessage();
             }
-            
-//            header("Content-Type: application/ json");
-//            echo json_encode ($json);                  
+        }
+        
+        public function verificaRecpPorMedia(MediaModel $media){
+            try{
+                $sql = "SELECT 
+                            r.*
+                        FROM 
+                            c_recp as r,
+                            m_media_md as m
+                        WHERE
+                            r.c_media_id = m.m_media_md_id AND
+                            m.c_media_id = ?";
+                $parametros = array($media->getId());
+                $rs = ConnectionFactory::getConection()->prepare($sql);
+                $rs->execute($parametros);
+                
+                if($rs->rowCount() > 0){
+                    return "true";
+                }else{
+                    return "false";
+                }
+                
+            } catch (Exception $e){
+                return $e->getMessage();
+            }
         }
 }

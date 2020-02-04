@@ -27,9 +27,9 @@ class NotaSemanalController {
                 $md->setId($objData->md);
                 
                 $notas = $objData->notasSemanais;
-                $notaMensal = 0;
+                $valorMensal = 0;
                 foreach ($notas as $notaSemanal){
-                    $valorMensal = $valorMensal +  $notaSemanal;
+                    $valorMensal = $valorMensal + $notaSemanal;
                     
                     $nota = new NotaSemanalModel();
                     $nota->setValor($notaSemanal);

@@ -17,7 +17,11 @@ interface iMediaDAO
         public function lancaMedia(MediaMDModel $mediaMd);
         public function excluiMediasPorMD(MatriculaDisciplinaModel $md);
         public function buscaMediasPorMD(MatriculaDisciplinaModel $md);
+        public function buscaMediasPorMDInterno(MatriculaDisciplinaModel $md);
         public function mediaCompleta(MatriculaDisciplinaModel $md, MediaModel $media);
         public function tipoAvaliacaoPorMediaInterno(MediaModel $media);
         public function buscaNotaPorTipo(MatriculaDisciplinaModel $md, TipoAvaliacaoModel $ta);
+        public function recuperarMedia(MediaMDModel $media, $valor);
+        public function viewMediaMd(MediaMDModel $media);
+        public function updateMediaMD(MediaMDModel $media);
 }

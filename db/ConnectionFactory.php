@@ -17,4 +17,3 @@ class ConnectionFactory {
 	}
 
 }// fim da classe ConnectionFactory
-
